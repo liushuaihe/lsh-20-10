@@ -49,10 +49,19 @@ export function planDelivery(
   let bestPlan: DeliveryPlan | null = null;
   let bestScore = Infinity;
 
+  const DAY_MINUTES = 24 * 60;
+  const effectiveDeadline =
+    parcel.deadline < parcel.pickupTime
+      ? parcel.deadline + DAY_MINUTES
+      : parcel.deadline;
+
   for (const route of availableRoutes) {
     const totalTime = route.totalTime;
-    const arrivalTime = parcel.pickupTime + totalTime;
-    const overtimeMinutes = Math.max(0, arrivalTime - parcel.deadline);
+    const rawArrival = parcel.pickupTime + totalTime;
+    const effectiveArrival =
+      rawArrival < parcel.pickupTime ? rawArrival + DAY_MINUTES : rawArrival;
+
+    const overtimeMinutes = Math.max(0, effectiveArrival - effectiveDeadline);
     const isOnTime = overtimeMinutes === 0;
 
     const overtimePenalty = overtimeMinutes * strategy.overtimePenaltyRate;
@@ -70,7 +79,7 @@ export function planDelivery(
         parcel,
         route,
         totalTime,
-        arrivalTime,
+        arrivalTime: rawArrival % DAY_MINUTES,
         isOnTime,
         overtimeMinutes,
         overtimePenalty,
